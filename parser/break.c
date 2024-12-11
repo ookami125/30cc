@@ -41,10 +41,10 @@ void continue_debug(int depth, parser_node *node)
 
 apply_result *continue_apply(parser_node *node, context *ctx)
 {
-    char* loop_end_label = (char*)malloc(128);
-    get_current_loop_start_label_counter(ctx, loop_end_label);
-    add_text(ctx, "jmp %s", loop_end_label);
-    free(loop_end_label);
+    char* loop_start_label = (char*)malloc(128);
+    get_current_loop_start_label_counter(ctx, loop_start_label);
+    add_text(ctx, "jmp %s", loop_start_label);
+    free(loop_start_label);
     return NULL;
 }
 
