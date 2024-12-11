@@ -155,9 +155,90 @@ void binary_op_debug(int depth, parser_node *node)
     binop->right->debug(depth + 2, binop->right);
 }
 
+apply_result *binary_op_short_apply(node_binary_op *binop, context *ctx)
+{
+    apply_result *left = binop->left->apply(binop->left, ctx);
+    char *rega = reg_a(left->type, ctx);
+    
+    if (left->type->kind != TYPE_PRIMITIVE && left->type->kind != TYPE_POINTER)
+    {
+        fprintf(stderr, "Binary-operators only valid for primitive and pointer types!\n");
+        general_type_debug(left->type, 0);
+        exit(1);
+    }
+
+    char *l1 = new_label(ctx);
+    char *l2 = new_label(ctx);
+    char *l3 = new_label(ctx);
+    char *l4 = new_label(ctx);
+
+    add_text(ctx, "mov %s, %s", rega, left->code);
+    add_text(ctx, "cmp %s, 0", rega);
+    if (binop->op == TKN_ANDAND)
+        add_text(ctx, "je %s", l1);
+    else
+        add_text(ctx, "jne %s", l1);
+    
+    apply_result *right = binop->right->apply(binop->right, ctx);
+
+    if(right->type->kind != TYPE_PRIMITIVE && right->type->kind != TYPE_POINTER)
+    {
+        fprintf(stderr, "Binary-operators only valid for primitive and pointer types!\n");
+        general_type_debug(right->type, 0);
+        exit(1);
+    }
+
+    if (left->type->kind == TYPE_POINTER && right->type->kind == TYPE_POINTER)
+    {
+        if (binop->op != TKN_EQ && binop->op != TKN_NEQ)
+        {
+            fprintf(stderr,
+                    "Left-hand-size and Right-hand-side can't be pointers at the same time!\n");
+            exit(1);
+        }
+    }
+
+    // TODO: clag gives warning when comparing int* and int
+    if (binop->op != TKN_ASSIGN && binop->op != TKN_EQ && binop->op != TKN_NEQ && binop->op != TKN_ANDAND &&
+        (left->type->kind == TYPE_POINTER || right->type->kind == TYPE_POINTER))
+    {
+        fprintf(stderr, "Invalid op on pointer '%d'\n", binop->op);
+        exit(1);
+    }
+
+    char *regb = reg_b(right->type, ctx);
+    add_text(ctx, "mov %s, %s", regb, right->code);
+    add_text(ctx, "mov %s, %s", rega, regb);
+    add_text(ctx, "jmp %s", l2);
+    add_text(ctx, "%s:", l1);
+    if (binop->op == TKN_ANDAND)
+        add_text(ctx, "mov rax, 0");
+    else
+        add_text(ctx, "mov rax, 1");
+    add_text(ctx, "%s:", l2);
+
+    add_text(ctx, "cmp %s, 0", rega);
+    add_text(ctx, "jne %s", l3);
+    add_text(ctx, "jmp %s", l4);
+    add_text(ctx, "%s:", l3);
+    add_text(ctx, "mov rax, 1");
+    add_text(ctx, "%s:", l4);
+
+    symbol *tmp = new_temp_symbol(ctx, new_primitive_type(TKN_INT));
+
+    char *rega_res = reg_a(tmp->type, ctx);
+    add_text(ctx, "mov %s, %s", tmp->repl, rega_res);
+    return new_result(tmp->repl, tmp->type);
+}
+
 apply_result *binary_op_apply(parser_node *node, context *ctx)
 {
     node_binary_op *binop = (node_binary_op *)node->data;
+    if(binop->op == TKN_ANDAND || binop->op == TKN_OROR)
+    {
+       return binary_op_short_apply(binop, ctx);
+    }
+
     apply_result *left = binop->left->apply(binop->left, ctx);
     apply_result *right = binop->right->apply(binop->right, ctx);
     char *rega = reg_a(left->type, ctx);
@@ -279,11 +360,13 @@ apply_result *binary_op_apply(parser_node *node, context *ctx)
         l2 = new_label(ctx);
         l3 = new_label(ctx);
         l4 = new_label(ctx);
+
         add_text(ctx, "cmp %s, 0", rega);
         if (binop->op == TKN_ANDAND)
             add_text(ctx, "je %s", l1);
         else
             add_text(ctx, "jne %s", l1);
+        
         add_text(ctx, "mov %s, %s", rega, regb);
         add_text(ctx, "jmp %s", l2);
         add_text(ctx, "%s:", l1);
