@@ -30,7 +30,7 @@ void advance_ptr(context *ctx, apply_result *ptr,
                  apply_result *primitive)
 {
     general_type *type = ((node_type *)ptr->type->data)->type;
-    int sz = type->size(type, ctx);
+    int sz = general_type_size(type, ctx);
 
     add_text(ctx, "mov rax, %s", primitive->code);
     add_text(ctx, "mov rbx, %u", sz);
@@ -65,7 +65,7 @@ apply_result *postfix_op_apply(parser_node *node, context *ctx)
     if (operand->type->kind == TYPE_POINTER)
     {
         general_type *type = ((node_type *)operand->type->data)->type;
-        unit = type->size(type, ctx);
+        unit = general_type_size(type, ctx);
     }
 
     if (op == TKN_PLUSPLUS)
@@ -113,7 +113,7 @@ apply_result *unary_op_apply(parser_node *node, context *ctx)
     if (operand->type->kind == TYPE_POINTER)
     {
         general_type *type = ((node_type *)operand->type->data)->type;
-        unit = type->size(type, ctx);
+        unit = general_type_size(type, ctx);
     }
 
     if (op == TKN_MIN)
@@ -168,8 +168,8 @@ apply_result *binary_op_apply(parser_node *node, context *ctx)
         if (!types_equal(left->type, right->type, ctx))
         {
             fprintf(stderr, "Cannot assign with an invalid type!\n");
-            left->type->debug(left->type, 0);
-            right->type->debug(right->type, 0);
+            general_type_debug(left->type, 0);
+            general_type_debug(right->type, 0);
             exit(1);
         }
     }
@@ -178,8 +178,8 @@ apply_result *binary_op_apply(parser_node *node, context *ctx)
         if ((left->type->kind != TYPE_PRIMITIVE && left->type->kind != TYPE_POINTER) || (right->type->kind != TYPE_PRIMITIVE && right->type->kind != TYPE_POINTER))
         {
             fprintf(stderr, "Binary-operators only valid for primitive and pointer types!\n");
-            left->type->debug(left->type, 0);
-            right->type->debug(right->type, 0);
+            general_type_debug(left->type, 0);
+            general_type_debug(right->type, 0);
             exit(1);
         }
 
@@ -227,8 +227,8 @@ apply_result *binary_op_apply(parser_node *node, context *ctx)
     char *l3 = NULL;
     char *l4 = NULL;
 
-    int lsize = left->type->size(left->type, ctx);
-    int rsize = right->type->size(right->type, ctx);
+    int lsize = general_type_size(left->type, ctx);
+    int rsize = general_type_size(right->type, ctx);
     symbol *tmp = right->type->kind == TYPE_POINTER ? new_temp_symbol(ctx, right->type) : new_temp_symbol(ctx, left->type);
 
     switch (binop->op)
@@ -425,7 +425,7 @@ apply_result *sizeof_apply(parser_node *node, context *ctx)
 {
     node_sizeof *size_of = (node_sizeof *)node->data;
     general_type *type = ((node_type *)size_of->type->data)->type;
-    int sz = type->size(type, ctx);
+    int sz = general_type_size(type, ctx);
     return new_result(cc_asprintf("%u", sz), new_primitive_type("TKN_INT"));
 }
 

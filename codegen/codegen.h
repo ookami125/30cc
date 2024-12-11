@@ -20,9 +20,10 @@ typedef struct general_type_
 {
     int kind;
     void *data;
-    void (*debug)(struct general_type_ *self, int depth);
-    int (*size)(struct general_type_ *self, context *ctx);
 } general_type;
+
+int general_type_size(general_type *self, context *ctx);
+void general_type_debug(general_type *self, int depth);
 
 typedef struct
 {

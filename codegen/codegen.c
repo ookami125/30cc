@@ -215,7 +215,7 @@ symbol *new_global_symbol(context *ctx, char *name, char *repl, general_type *ty
 
 symbol *new_symbol(context *ctx, char *name, general_type *type)
 {
-    int sz = type->size(type, ctx);
+    int sz = general_type_size(type, ctx);
     symbol *newsym = (symbol *)malloc(sizeof(symbol));
     newsym->name = name;
     newsym->offset = 0;
@@ -223,7 +223,7 @@ symbol *new_symbol(context *ctx, char *name, general_type *type)
     if (ctx->symbol_table->last)
     {
         symbol *lastsym = ((symbol *)ctx->symbol_table->last->value);
-        newsym->offset = lastsym->offset + lastsym->type->size(lastsym->type, ctx);
+        newsym->offset = lastsym->offset + general_type_size(lastsym->type, ctx);
     }
     newsym->repl = cc_asprintf("[rbp-%u]", newsym->offset + sz);
     add_to_list(ctx->symbol_table, newsym);
@@ -295,7 +295,7 @@ void pointer_type_debug(general_type *self, int depth)
     pointer_type *p = (pointer_type *)self->data;
     printtabs(depth);
     printf("Pointer of:\n");
-    p->of->debug(p->of, depth + 1);
+    general_type_debug(p->of, depth + 1);
 }
 
 int pointer_type_size(general_type *self, context *ctx)
@@ -312,14 +312,14 @@ void func_type_debug(general_type *self, int depth)
     printf("Func:\n");
     printtabs(depth + 1);
     printf("Returns:\n");
-    p->return_type->debug(p->return_type, depth + 2);
+    general_type_debug(p->return_type, depth + 2);
     printtabs(depth + 1);
     printf("Args:\n");
     list_node *curr = p->arg_types->first;
     while (curr)
     {
         general_type *tp = ((general_type *)curr->value);
-        tp->debug(tp, depth + 2);
+        general_type_debug(tp, depth + 2);
         curr = curr->next;
     }
 }
@@ -346,9 +346,43 @@ int struct_type_size(general_type *self, context *ctx)
     int sz = 0;
     for (int i = 0; i < s->num_fields; i++)
     {
-        sz += s->fields[i]->size(s->fields[i], ctx);
+        sz += general_type_size(s->fields[i], ctx);
     }
     return sz;
+}
+
+int general_type_size(struct general_type_ *self, context *ctx)
+{
+    if(self->kind == TYPE_PRIMITIVE) {
+        return primitive_type_size(self, ctx);
+    }
+    else if(self->kind == TYPE_POINTER) {
+        return pointer_type_size(self, ctx);
+    }
+    else if(self->kind == TYPE_FUNC) {
+        return func_type_size(self, ctx);
+    }
+    else if(self->kind == TYPE_STRUCT) {
+        return struct_type_size(self, ctx);
+    }
+
+    return 0;
+}
+
+void general_type_debug(struct general_type_ *self, int depth)
+{
+    if(self->kind == TYPE_PRIMITIVE) {
+        return primitive_type_debug(self, depth);
+    }
+    else if(self->kind == TYPE_POINTER) {
+        return pointer_type_debug(self, depth);
+    }
+    else if(self->kind == TYPE_FUNC) {
+        return func_type_debug(self, depth);
+    }
+    else if(self->kind == TYPE_STRUCT) {
+        return struct_type_debug(self, depth);
+    }
 }
 
 general_type *new_primitive_type(char *type_name)
@@ -358,8 +392,6 @@ general_type *new_primitive_type(char *type_name)
     data->type_name = type_name;
     ret->kind = TYPE_PRIMITIVE;
     ret->data = (void *)data;
-    ret->debug = primitive_type_debug;
-    ret->size = primitive_type_size;
     return ret;
 }
 
@@ -370,8 +402,6 @@ general_type *new_pointer_type(general_type *of)
     data->of = of;
     ret->kind = TYPE_POINTER;
     ret->data = (void *)data;
-    ret->debug = pointer_type_debug;
-    ret->size = pointer_type_size;
     return ret;
 }
 
@@ -383,8 +413,6 @@ general_type *new_func_type(general_type *return_type, linked_list *arg_types)
     data->arg_types = arg_types;
     ret->kind = TYPE_FUNC;
     ret->data = (void *)data;
-    ret->debug = func_type_debug;
-    ret->size = func_type_size;
     return ret;
 }
 
@@ -395,8 +423,6 @@ general_type *new_struct_type(char *struct_name)
     data->struct_name = struct_name;
     ret->kind = TYPE_STRUCT;
     ret->data = (void *)data;
-    ret->debug = struct_type_debug;
-    ret->size = struct_type_size;
     return ret;
 }
 
@@ -413,17 +439,17 @@ int types_equal(general_type *a, general_type *b, context *ctx)
         }
     }
 
-    if ((a->debug != b->debug) || (a->size != b->size))
+    if (a->kind != b->kind)
     {
         return 0;
     }
-    if (a->size == primitive_type_size)
+    if (a->kind == TYPE_PRIMITIVE)
     {
         char *a_name = ((primitive_type *)a->data)->type_name;
         char *b_name = ((primitive_type *)b->data)->type_name;
         return strcmp(a_name, b_name) == 0;
     }
-    else if (a->size == struct_type_size)
+    else if (a->kind == TYPE_STRUCT)
     {
         char *a_name = ((struct_type *)a->data)->struct_name;
         char *b_name = ((struct_type *)b->data)->struct_name;
@@ -435,13 +461,13 @@ int types_equal(general_type *a, general_type *b, context *ctx)
             return 0;
         return a_struct->struct_id == b_struct->struct_id;
     }
-    else if (a->size == pointer_type_size)
+    else if (a->kind == TYPE_POINTER)
     {
         general_type *a_of = ((pointer_type *)a->data)->of;
         general_type *b_of = ((pointer_type *)b->data)->of;
         return types_equal(a_of, b_of, ctx);
     }
-    else if (a->size == func_type_size)
+    else if (a->kind == TYPE_FUNC)
     {
         general_type *a_ret = ((func_type *)a->data)->return_type;
         general_type *b_ret = ((func_type *)b->data)->return_type;
@@ -469,7 +495,7 @@ int types_equal(general_type *a, general_type *b, context *ctx)
 
 char *reg_a(general_type *tp, context *ctx)
 {
-    int sz = tp->size(tp, ctx);
+    int sz = general_type_size(tp, ctx);
     if (sz == 1)
         return "al";
     else if (sz == 8)
@@ -479,7 +505,7 @@ char *reg_a(general_type *tp, context *ctx)
 
 char *reg_b(general_type *tp, context *ctx)
 {
-    int sz = tp->size(tp, ctx);
+    int sz = general_type_size(tp, ctx);
     if (sz == 1)
         return "bl";
     else if (sz == 8)
@@ -489,7 +515,7 @@ char *reg_b(general_type *tp, context *ctx)
 
 char *reg_typed(char *reg, general_type *tp, context *ctx)
 {
-    int sz = tp->size(tp, ctx);
+    int sz = general_type_size(tp, ctx);
     if (strcmp(reg, "rdi") == 0)
     {
         if (sz == 8)

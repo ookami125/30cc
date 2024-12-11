@@ -24,7 +24,7 @@ apply_result *index_apply(parser_node *node, context *ctx)
     apply_result *arr = idx->arr->apply(idx->arr, ctx);
     general_type *base_type = ((pointer_type *)arr->type->data)->of;
 
-    int elem_size = base_type->size(base_type, ctx);
+    int elem_size = general_type_size(base_type, ctx);
     apply_result *ind = idx->ind->apply(idx->ind, ctx);
     add_text(ctx, "mov rax, %s", ind->code);
     add_text(ctx, "mov rbx, %u", elem_size);

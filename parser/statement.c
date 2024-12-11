@@ -46,7 +46,10 @@ apply_result *return_apply(parser_node *node, context *ctx)
     if (func->exp)
     {
         apply_result *val = func->exp->apply(func->exp, ctx);
-        add_text(ctx, "mov %s, %s", reg_a(val->type, ctx), val->code);
+        if(val != 0)
+        {
+            add_text(ctx, "mov %s, %s", reg_a(val->type, ctx), val->code);
+        }
     }
 
     add_text(ctx, "mov rsp, rbp");

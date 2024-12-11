@@ -44,7 +44,7 @@ apply_result *access_apply(parser_node *node, context *ctx)
             field_type = ctx_struct->fields[i];
             break;
         }
-        offset += ctx_struct->fields[i]->size(ctx_struct->fields[i], ctx);
+        offset += general_type_size(ctx_struct->fields[i], ctx);
     }
     if (field_type)
     {
