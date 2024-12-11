@@ -300,7 +300,7 @@ apply_result *binary_op_apply(parser_node *node, context *ctx)
         add_text(ctx, "mov rax, 1");
         add_text(ctx, "%s:", l4);
 
-        tmp = new_temp_symbol(ctx, new_primitive_type("TKN_INT"));
+        tmp = new_temp_symbol(ctx, new_primitive_type(TKN_INT));
         break;
     case TKN_LT:
     case TKN_LTE:
@@ -333,7 +333,7 @@ apply_result *binary_op_apply(parser_node *node, context *ctx)
         add_text(ctx, "mov rax, 1");
         add_text(ctx, "%s:", l2);
 
-        tmp = new_temp_symbol(ctx, new_primitive_type("TKN_INT"));
+        tmp = new_temp_symbol(ctx, new_primitive_type(TKN_INT));
         break;
     default:
         fprintf(stderr, "Invalid op '%d'\n", binop->op);
@@ -426,7 +426,7 @@ apply_result *sizeof_apply(parser_node *node, context *ctx)
     node_sizeof *size_of = (node_sizeof *)node->data;
     general_type *type = ((node_type *)size_of->type->data)->type;
     int sz = general_type_size(type, ctx);
-    return new_result(cc_asprintf("%u", sz), new_primitive_type("TKN_INT"));
+    return new_result(cc_asprintf("%u", sz), new_primitive_type(TKN_INT));
 }
 
 parser_node *parse_paren(typed_token **tkns_ptr)

@@ -1,5 +1,6 @@
 #include "../libc.h"
 #include "codegen.h"
+#include "../lexer.h"
 #include "../linked_list.h"
 
 #ifndef _30CC
@@ -272,20 +273,20 @@ void primitive_type_debug(general_type *self, int depth)
 {
     primitive_type *p = (primitive_type *)self->data;
     printtabs(depth);
-    printf("%s\n", p->type_name);
+    printf("type_%d\n", p->type);
 }
 
 int primitive_type_size(general_type *self, context *ctx)
 {
     UNUSED(ctx);
     primitive_type *p = (primitive_type *)self->data;
-    if (strcmp(p->type_name, "TKN_INT") == 0)
+    if (p->type == TKN_INT)
         return 8;
-    if (strcmp(p->type_name, "TKN_CHAR") == 0)
+    if (p->type == TKN_CHAR)
         return 1;
-    if (strcmp(p->type_name, "TKN_VOID") == 0)
+    if (p->type == TKN_VOID)
         return 0;
-    fprintf(stderr, "Unknown type '%s'!\n", p->type_name);
+    fprintf(stderr, "Unknown type '%d'!\n", p->type);
     exit(1);
     return 0;
 }
@@ -385,11 +386,11 @@ void general_type_debug(struct general_type_ *self, int depth)
     }
 }
 
-general_type *new_primitive_type(char *type_name)
+general_type *new_primitive_type(int type)
 {
     general_type *ret = (general_type *)malloc(sizeof(general_type));
     primitive_type *data = (primitive_type *)malloc(sizeof(primitive_type));
-    data->type_name = type_name;
+    data->type = type;
     ret->kind = TYPE_PRIMITIVE;
     ret->data = (void *)data;
     return ret;
@@ -433,8 +434,8 @@ int types_equal(general_type *a, general_type *b, context *ctx)
     {
         if (b->kind == TYPE_PRIMITIVE)
         {
-            char *type_name = ((primitive_type *)b->data)->type_name;
-            if (strcmp(type_name, "TKN_INT") == 0)
+            int type = ((primitive_type *)b->data)->type;
+            if (type == TKN_INT)
                 return 1;
         }
     }
@@ -445,9 +446,9 @@ int types_equal(general_type *a, general_type *b, context *ctx)
     }
     if (a->kind == TYPE_PRIMITIVE)
     {
-        char *a_name = ((primitive_type *)a->data)->type_name;
-        char *b_name = ((primitive_type *)b->data)->type_name;
-        return strcmp(a_name, b_name) == 0;
+        int a_name = ((primitive_type *)a->data)->type;
+        int b_name = ((primitive_type *)b->data)->type;
+        return a_name == b_name;
     }
     else if (a->kind == TYPE_STRUCT)
     {

@@ -42,7 +42,7 @@ typedef struct
 
 typedef struct
 {
-    char *type_name;
+    int type;
 } primitive_type;
 
 typedef struct
@@ -61,7 +61,7 @@ typedef struct
     linked_list *arg_types;
 } func_type;
 
-general_type *new_primitive_type(char *type_name);
+general_type *new_primitive_type(int type);
 general_type *new_struct_type(char *struct_name);
 general_type *new_pointer_type(general_type *of);
 general_type *new_func_type(general_type *return_type, linked_list *arg_types);

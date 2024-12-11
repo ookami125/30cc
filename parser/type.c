@@ -17,11 +17,11 @@ parser_node *parse_type(typed_token **tkns_ptr, int allow_naming)
     parser_node *node = NULL;
     if (tkn->type_id == TKN_INT || tkn->type_id == TKN_VOID || tkn->type_id == TKN_CHAR)
     {
-        typed_token *ret_type_tkn = tkn;
+        int type = tkn->type_id;
         tkn = tkn->next;
         node = new_node(type_debug, NULL, sizeof(node_type));
         node_type *par = (node_type *)node->data;
-        par->type = new_primitive_type(ret_type_tkn->data);
+        par->type = new_primitive_type(type);
         par->name = NULL;
     }
     else if (tkn->type_id == TKN_STRUCT || tkn->type_id == TKN_ID)
